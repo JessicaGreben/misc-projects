@@ -6,15 +6,9 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
-)
 
-const (
-	idLength    = 20                     // Length in bytes of the Node ID.
-	keyLength   = 20                     // Length in bytes of the key for storing data.
-	k           = 20                     // Max number of contacts in any one bucket.
-	alpha       = 3                      // System wide concurrency parameter.
-	bitsPerByte = 8                      // How many bits in a byte.
-	bucketCount = idLength * bitsPerByte // How many buckets should be created for each route table.
+	kadNet "github.com/jessicagreben/kademlia/pkg/network"
+	"github.com/jessicagreben/kademlia/pkg/types"
 )
 
 func main() {
@@ -23,13 +17,25 @@ func main() {
 		port := os.Args[2]
 		server(port)
 	case "-c":
-		Ping()
+		boot := types.Contact{
+			NodeID: types.NodeID{0},
+			IP:     "boot",
+			Port:   "8080",
+		}
+
+		if err := kadNet.Ping(boot); err != nil {
+			os.Exit(1)
+		}
 	}
 }
 
 func server(port string) error {
-	network := new(Network)
+	network := new(kadNet.Network)
+
+	// Publishes the networks methods to the server.
 	rpc.Register(network)
+
+	// Registers an HTTP handler for RPC messages to the server.
 	rpc.HandleHTTP()
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
@@ -38,7 +44,7 @@ func server(port string) error {
 	}
 	fmt.Println("Joining network...")
 
-	err = network.join("localhost", port)
+	err = network.Join("localhost", port)
 	if err != nil {
 		fmt.Println("network.join err: ", err)
 		return err

@@ -1,7 +1,9 @@
-package main
+package node
 
 import (
 	"testing"
+
+	"github.com/jessicagreben/kademlia/pkg/types"
 )
 
 func TestGenerateNodeID(t *testing.T) {
@@ -15,7 +17,7 @@ func TestGenerateNodeID(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualOut := generateNodeID(tt.input)
+			actualOut := GenerateNodeID(tt.input)
 			if len(actualOut) != idLength {
 				t.Errorf("Expected %d, Actual %d", idLength, len(actualOut))
 			}
@@ -24,31 +26,31 @@ func TestGenerateNodeID(t *testing.T) {
 }
 
 func TestNodeDistance(t *testing.T) {
-	id1 := nodeID{}
+	id1 := types.NodeID{}
 	a := []byte{255}
 	copy(id1[:], a)
 
-	id2 := nodeID{}
+	id2 := types.NodeID{}
 	b := []byte{0}
 	copy(id2[:], b)
 
-	id3 := nodeID{}
+	id3 := types.NodeID{}
 	d := []byte{5, 8}
 	copy(id3[:], d)
 
-	id4 := nodeID{}
+	id4 := types.NodeID{}
 	e := []byte{8, 5}
 	copy(id4[:], e)
 
-	id5 := nodeID{}
+	id5 := types.NodeID{}
 	f := []byte{13, 13}
 	copy(id5[:], f)
 
 	var testCases = []struct {
 		name        string
-		id1         nodeID
-		id2         nodeID
-		expectedOut nodeID
+		id1         types.NodeID
+		id2         types.NodeID
+		expectedOut types.NodeID
 	}{
 		{"all different", id1, id2, id1},
 		{"same value", id1, id1, id2},
@@ -57,7 +59,7 @@ func TestNodeDistance(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualOut := nodeDistance(tt.id1, tt.id2)
+			actualOut := Distance(tt.id1, tt.id2)
 			if actualOut != tt.expectedOut {
 				t.Errorf("Expected %08b, Actual %08b", tt.expectedOut, actualOut)
 			}
@@ -68,16 +70,16 @@ func TestNodeDistance(t *testing.T) {
 func TestFindLongestPrefix(t *testing.T) {
 	var testCases = []struct {
 		name        string
-		in          nodeID
+		in          types.NodeID
 		expectedOut int
 	}{
-		{"all prefix zeros", nodeID{}, 160},
-		{"no prefix zeros", nodeID{255}, 0},
+		{"all prefix zeros", types.NodeID{}, 160},
+		{"no prefix zeros", types.NodeID{255}, 0},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualOut := findLongestPrefix(tt.in)
+			actualOut := FindLongestPrefix(tt.in)
 			if actualOut != tt.expectedOut {
 				t.Errorf("Expected %d, Actual %d", tt.expectedOut, actualOut)
 			}

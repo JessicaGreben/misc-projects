@@ -1,22 +1,21 @@
-package main
+package node
 
 import (
 	"crypto/rand"
 	"fmt"
-	"sync"
+
+	"github.com/jessicagreben/kademlia/pkg/types"
 )
 
-// Contact stores information about how to contact a node in the network.
-type Contact struct {
-	Node   nodeID
-	IpAddr string
-	Port   string
-}
+const (
+	idLength  = 20 // Length in bytes of the Node ID.
+	keyLength = 20 // Length in bytes of the key for storing data.
+	alpha     = 3  // System wide concurrency parameter.
+)
 
-type nodeID [idLength]byte
-
-func generateNodeID(idLength int) nodeID {
-	id := nodeID{}
+// GenerateID does x.
+func GenerateID(idLength int) types.NodeID {
+	id := types.NodeID{}
 	idSlice := make([]byte, idLength)
 	_, err := rand.Read(idSlice)
 	if err != nil {
@@ -28,8 +27,9 @@ func generateNodeID(idLength int) nodeID {
 	return id
 }
 
-func nodeDistance(node1, node2 nodeID) nodeID {
-	xorBytes := nodeID{}
+// Distance is x.
+func Distance(node1, node2 types.NodeID) types.NodeID {
+	xorBytes := types.NodeID{}
 
 	// Iterate over each byte of node1 and node2 ID and XOR each byte.
 	for i := 0; i < idLength; i++ {
@@ -39,7 +39,8 @@ func nodeDistance(node1, node2 nodeID) nodeID {
 	return xorBytes
 }
 
-func findLongestPrefix(xorBytes nodeID) int {
+// FindLongestPrefix is x.
+func FindLongestPrefix(xorBytes types.NodeID) int {
 	var prefix int
 
 	// Iterate over each byte in xorBytes.
@@ -70,38 +71,12 @@ func findLongestPrefix(xorBytes nodeID) int {
 	return prefix
 }
 
-type routingTable struct {
-	boot        Contact
-	currentNode Contact
-
-	// Keep a mapping of node IDs that currently exist in the buckets.
-	currentNodesInBucket map[nodeID]struct{}
-
-	// One bucket for each bit in the current node's ID.
-	buckets [bucketCount]bucket
-
-	mu sync.Mutex
-}
-
-func newRoutingTable(c Contact) *routingTable {
-	boot := Contact{
-		Node:   nodeID{0},
-		IpAddr: "localhost",
-		Port:   "8080",
-	}
-	var mu sync.Mutex
-	rt := routingTable{
-		boot: boot,
-		mu:   mu,
-	}
-	for i := 0; i < idLength; i++ {
-		rt.buckets[i] = bucket{}
-	}
-	rt.currentNode = c
-	return &rt
-}
-
-func (rt *routingTable) add(c Contact) {
-	bucket := getBucket(c.Node, rt)
-	bucket.push(c, rt)
+// FindBucketIndex is x.
+// The bucket that a node contact should be placed in is determined by the
+// numbering of leading 0 bits in the XOR of the current node ID with the target
+// node ID.
+func FindBucketIndex(node1, node2 types.NodeID) int {
+	xorBytes := Distance(node1, node2)
+	bucketIndex := FindLongestPrefix(xorBytes)
+	return bucketIndex
 }

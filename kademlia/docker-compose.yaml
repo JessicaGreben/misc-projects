@@ -12,7 +12,9 @@ services:
     depends_on: 
       - boot
     ports:
-    - "8081:8081"
+      - "8081:8081"
+    links: 
+      - boot
     command: ./kademlia -s 8081
   # node2:
   #   build: .
