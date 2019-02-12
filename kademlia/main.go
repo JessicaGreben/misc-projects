@@ -14,8 +14,9 @@ import (
 func main() {
 	switch os.Args[1] {
 	case "-s":
-		port := os.Args[2]
-		server(port)
+		host := os.Args[2]
+		port := os.Args[3]
+		server(host, port)
 	case "-c":
 		boot := types.Contact{
 			NodeID: types.NodeID{0},
@@ -23,13 +24,14 @@ func main() {
 			Port:   "8080",
 		}
 
-		if err := kadNet.Ping(boot); err != nil {
+		_, err := kadNet.Ping(boot)
+		if err != nil {
 			os.Exit(1)
 		}
 	}
 }
 
-func server(port string) error {
+func server(host, port string) error {
 	network := new(kadNet.Network)
 
 	// Publishes the networks methods to the server.
@@ -42,9 +44,9 @@ func server(port string) error {
 		fmt.Println("net.Listen err: ", err)
 		return err
 	}
-	fmt.Println("Joining network...")
 
-	err = network.Join("localhost", port)
+	fmt.Println("Joining network...")
+	err = network.Join(host, port)
 	if err != nil {
 		fmt.Println("network.join err: ", err)
 		return err

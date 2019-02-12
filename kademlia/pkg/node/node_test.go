@@ -6,6 +6,12 @@ import (
 	"github.com/jessicagreben/kademlia/pkg/types"
 )
 
+func setupNodeID(value []byte) types.NodeID {
+	n := types.NodeID{}
+	copy(n[:], value)
+	return n
+}
+
 func TestGenerateNodeID(t *testing.T) {
 	var testCases = []struct {
 		name  string
@@ -17,7 +23,7 @@ func TestGenerateNodeID(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualOut := GenerateNodeID(tt.input)
+			actualOut := GenerateID(tt.input)
 			if len(actualOut) != idLength {
 				t.Errorf("Expected %d, Actual %d", idLength, len(actualOut))
 			}
@@ -26,25 +32,11 @@ func TestGenerateNodeID(t *testing.T) {
 }
 
 func TestNodeDistance(t *testing.T) {
-	id1 := types.NodeID{}
-	a := []byte{255}
-	copy(id1[:], a)
-
-	id2 := types.NodeID{}
-	b := []byte{0}
-	copy(id2[:], b)
-
-	id3 := types.NodeID{}
-	d := []byte{5, 8}
-	copy(id3[:], d)
-
-	id4 := types.NodeID{}
-	e := []byte{8, 5}
-	copy(id4[:], e)
-
-	id5 := types.NodeID{}
-	f := []byte{13, 13}
-	copy(id5[:], f)
+	id1 := setupNodeID([]byte{255})
+	id2 := setupNodeID([]byte{0})
+	id3 := setupNodeID([]byte{5, 8})
+	id4 := setupNodeID([]byte{8, 5})
+	id5 := setupNodeID([]byte{13, 13})
 
 	var testCases = []struct {
 		name        string

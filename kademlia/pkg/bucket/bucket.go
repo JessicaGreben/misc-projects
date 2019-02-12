@@ -1,8 +1,6 @@
 package bucket
 
 import (
-	"fmt"
-
 	"github.com/jessicagreben/kademlia/pkg/types"
 )
 
@@ -12,130 +10,53 @@ const k = 20 // Max number of contacts in any one bucket.
 // Most recently contacted is at the end, least recently contacted is at beginning.
 type Bucket []types.Contact
 
-func (b Bucket) shift() types.Contact {
+// Shift removes the contact that is at the beginning of the bucket.
+// Most recently contacted is at the end, least recently contacted is at beginning.
+func (b Bucket) Shift() (Bucket, types.Contact) {
 
 	// First check that there are any Contacts in this bucket.
 	if len(b) < 1 {
-		return types.Contact{}
+		return b, types.Contact{}
 	}
 
-	// Find the first element to return.
-	c := b[0]
-
-	// Remove the first Contact from the bucket.
-	b = b[1:]
-
-	// TODO: this logic should be moved out to a route table function.
-	// Delete this first element from the tracking map.
-	// rt.mu.Lock()
-	// delete(rt.currentNodesInBucket, c.Node)
-	// rt.mu.Unlock()
-
-	return c
+	return b[:0], b[0]
 }
 
-func (b Bucket) isFull() bool {
-	if len(b) == k-1 {
+// IsFull checks if the bucket is currently full.
+func (b Bucket) IsFull() bool {
+	if len(b) == k {
 		return true
 	}
+
+	// TODO: what if the bucket length is greater than k?
 	return false
 }
 
-// Push does x.
-func (b *Bucket) Push(c types.Contact) error {
-
-	fmt.Println("1. In push")
-
-	// TODO: first check if bucket is full.
-	// If its full, ping first node and remove if unresponsive.
-	count := 0
-	if b.isFull() {
-		fmt.Println("2. In push")
-
-		// Try to make space, by pinging each node currently in the bucket.
-		for count < k {
-			for _, c := range *b {
-				found := b.ping(c)
-				if !found {
-					// b.cut(ind, rt)
-					break
-				}
-				count++
-			}
-		}
-
-		// If we get here, then all nodes in the bucket are responsive
-		// and we cannot add this new node
-		return nil
-	}
-
-	fmt.Println("3. In push")
+// Push adds a new contact to the end of the bucket.
+// Most recently contacted is at the end, least recently contacted is at beginning.
+func (b Bucket) Push(c types.Contact) Bucket {
 
 	// Add a Contact to the end of the bucket list.
-	*b = append(*b, c)
-	fmt.Println("4. In push")
-	fmt.Println("In push, new bucket content:", b)
-	return nil
+	return append(b, c)
 }
 
-//TODO: move to net package
-func (b Bucket) ping(c types.Contact) bool {
-
-	// 	// Make Ping request.
-	// 	if err := Ping(c); err != nil {
-	// 		return false
-	// 	}
-
-	return true
-}
-
-// Return the index of the node in the bucket.
-func (b Bucket) find(id types.NodeID) (int, bool) {
-	index := 0
-	for index, Contact := range b {
-		if id == Contact.NodeID {
-			return index, true
+// Find returns the index of the node in the bucket.
+func (b Bucket) Find(id types.NodeID) (int, types.Contact, bool) {
+	var index int
+	for index, contact := range b {
+		if id == contact.NodeID {
+			return index, contact, true
 		}
 	}
-	return index, false
+	return index, types.Contact{}, false
 }
 
-// Remove the Contact from the bucket.
-func (b Bucket) cut(index int) types.Contact {
-	c := b[index]
+// Remove the contact at the index position from the bucket.
+func (b Bucket) Remove(index int) Bucket {
 
-	// Delete this first element from the tracking map.
-	// rt.mu.Lock()
-	// delete(rt.currentNodesInBucket, c.Node)
-	// rt.mu.Unlock()
-
-	b = append(b[:index], b[index+1:]...)
-	return c
-}
-
-// MoveToEnd is x.
-func (b *Bucket) MoveToEnd(id types.NodeID) error {
-	_, found := b.find(id)
-	if found {
-		// contact := b.cut(ind, rt)
-		// b.push(contact, rt)
-		return nil
+	// TODO: return error if index is beyond bucket size.
+	if len(b)-1 < index {
+		return b
 	}
-	return nil
-}
-
-func (b *Bucket) update(c types.Contact) error {
-	_, found := b.find(c.NodeID)
-	if found {
-
-		// If the Contact is in the bucket already, then move it to the end
-		// since its recently communicated with.
-		b.MoveToEnd(c.NodeID)
-		return nil
-	}
-
-	// If the contact doesn't already exist in the bucket list,
-	// then add it to the end of the bucket list.
-	// b.push(c, rt)
-	return nil
+	return append(b[:index], b[index+1:]...)
 }

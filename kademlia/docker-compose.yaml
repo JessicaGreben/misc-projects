@@ -5,7 +5,7 @@ services:
     image: kad
     ports:
     - "8080:8080"
-    entrypoint: ./kademlia -s 8080
+    entrypoint: ./kademlia -s boot 8080
   node1:
     build: .
     image: kad
@@ -15,12 +15,16 @@ services:
       - "8081:8081"
     links: 
       - boot
-    command: ./kademlia -s 8081
-  # node2:
-  #   build: .
-  #   image: kad
-    # depends_on: 
-    #   - boot
-  #   ports:
-  #   - "8082:8082"
-  #   command: ./kademlia -s 8082
+    command: ./kademlia -s node1 8081
+  node2:
+    build: .
+    image: kad
+    depends_on: 
+      - boot
+      - node1
+    links: 
+      - node1
+      - boot
+    ports:
+    - "8082:8082"
+    command: ./kademlia -s node2 8082

@@ -15,7 +15,7 @@ type Network struct {
 	rt *routingTable
 }
 
-// Join does x.
+// Join creates a node ID, creates a routing table, and populates the routing table for a node.
 func (n *Network) Join(currIP string, currPort string) error {
 
 	// Generate an ID for the current node.
@@ -32,7 +32,7 @@ func (n *Network) Join(currIP string, currPort string) error {
 	n.rt = newRoutingTable(self)
 	fmt.Println("route table", n.rt)
 
-	if currPort == "8080" {
+	if currIP == "boot" {
 		return nil
 	}
 
@@ -44,19 +44,20 @@ func (n *Network) Join(currIP string, currPort string) error {
 	}
 	fmt.Println(listContacts)
 
-	// TODO: if len(listContacts) == 0
+	if len(listContacts) == 0 {
+		return nil
+	}
 
 	// Next, add self to the closest contacts returned by the bootstrap node.
-	// _, err = recursiveLookup(self.node, listContacts, n.rt)
-	// if err != nil {
-	// 	return err
-	// }
+	_, err = recursiveLookup(self.NodeID, listContacts, n.rt)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func lookup(desiredNodeID types.NodeID, otherNode types.Contact, currentNode types.Contact) ([]types.Contact, error) {
 	addr := fmt.Sprintf("%s:%s", otherNode.IP, otherNode.Port)
-	fmt.Println("rpc Lookup to server:", addr)
 	client := client(addr)
 	l := ListContacts{}
 	args := LookupArgs{
@@ -67,7 +68,6 @@ func lookup(desiredNodeID types.NodeID, otherNode types.Contact, currentNode typ
 		return []types.Contact{}, err
 	}
 	if l.Success {
-		fmt.Println(l)
 		fmt.Println("success")
 		return l.Contacts, nil
 	}
@@ -83,54 +83,35 @@ type ListContacts struct {
 	ErrMsg   string
 }
 
-// Lookup is x.
+// Lookup checks the route table for the node ID and returns a contact if it exists.
+// Otherwise, it returns the closest nodes to that ID.
 func (n *Network) Lookup(a LookupArgs, reply *ListContacts) error {
 	desiredNodeID := a.DesiredNodeID
 	requestFrom := a.RequestFrom
 
-	// First update Contact of the node making the request to the route table.
-	ind := node.FindBucketIndex(requestFrom.NodeID, n.rt.currentNode.NodeID)
-	bucket := n.rt.buckets[ind]
-	_, found := n.rt.currentNodesInBucket[requestFrom.NodeID]
-	if !found {
-
-		if err := n.rt.add(requestFrom); err != nil {
-			return err
-		}
-	} else {
-		if err := bucket.MoveToEnd(requestFrom.NodeID); err != nil {
-			return err
-		}
-	}
-	fmt.Println("updated route table buckets: ", n.rt.buckets)
-	fmt.Println("updated route table nodes in bucket: ", n.rt.currentNodesInBucket)
-
-	// Second, look for desired node ID in the route table.
-	_, found = n.rt.currentNodesInBucket[desiredNodeID]
+	// Look for desired node ID in the route table.
+	c, found := n.rt.find(desiredNodeID)
 	if found {
-
-		// bucket := getBucket(desiredNodeID, n.rt)
-		// 	ind, ok := bucket.find(desiredNodeID)
-		// 	if !ok {
-		// 		// do something
-		// 	}
-		// 	c := bucket.cut(ind, n.rt)
-		// 	reply.Contacts = []Contact{c}
+		reply.Contacts = []types.Contact{c}
 		reply.Success = true
 		reply.Found = true
+
+		// Update Contact of the node making the request to the route table.
+		n.rt.add(requestFrom)
+		return nil
 	}
 
 	// If the desiredNodeID is not found in the routing table
 	// then find the closest nodes and return those.
 	xorBytes := node.Distance(desiredNodeID, n.rt.currentNode.NodeID)
-	fmt.Printf("xorBytes: %08b\n", xorBytes)
-	ind = node.FindLongestPrefix(xorBytes)
-	fmt.Println("ind:", ind)
+	ind := node.FindLongestPrefix(xorBytes)
 	closestNodes := n.rt.findClosestNodes(ind)
-	fmt.Println("closestNodes:", closestNodes)
 	reply.Contacts = closestNodes
 	reply.Success = true
 	reply.Found = false
+
+	// Update Contact of the node making the request to the route table.
+	n.rt.add(requestFrom)
 	return nil
 }
 
@@ -152,20 +133,19 @@ type Pong struct {
 type Args struct{}
 
 // Ping is a method to see if a contact is still available.
-func Ping(c types.Contact) error {
-	// addr := "boot:8080"
+func Ping(c types.Contact) (bool, error) {
 	addr := fmt.Sprintf("%s:%s", c.IP, c.Port)
 	client := client(addr)
 	p := Pong{}
 	if err := client.Call("Network.Pong", Args{}, &p); err != nil {
 		fmt.Println("error")
-		return err
+		return false, err
 	}
 	if p.Success {
 		fmt.Println("success")
-		return nil
+		return true, nil
 	}
-	return errors.New(p.ErrMsg)
+	return false, errors.New(p.ErrMsg)
 }
 
 // Pong is a x.
@@ -175,19 +155,12 @@ func (n *Network) Pong(a Args, reply *Pong) error {
 	return nil
 }
 
-// LookupArgs is x.
+// LookupArgs are the arguments to the Lookup RPC.
 type LookupArgs struct {
 	RequestFrom   types.Contact
 	DesiredNodeID types.NodeID
 }
 
-// func (n *Network) setupRouteTable(currIP [4]byte, currPort [2]byte) error {
-
-// Usage:
-// foundContact := recursiveLookup(desiredNodeID, listContacts, rt)
-// if foundContact.node == nodeID{} {
-// 		 not found
-// }
 func recursiveLookup(desiredNodeID types.NodeID, listContacts []types.Contact, rt *routingTable) (types.Contact, error) {
 	switch len(listContacts) {
 	case 0:
