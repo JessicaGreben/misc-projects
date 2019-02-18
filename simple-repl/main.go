@@ -1,6 +1,6 @@
 package main
 
-import "Grebenschikov_Jess/cmd"
+import "github.com/jessicagreben/misc-projects/simple-repl/cmd"
 
 func main() {
 	cmd.Run()
