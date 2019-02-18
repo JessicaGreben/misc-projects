@@ -9,8 +9,12 @@ Suppose you have two laptops (A and B) and a server. The user of laptop A wants 
 Write three programs:
 
 1. The sender - this program will send a file to the relay server.
-2. The receiver - this program will retrieve a file from the relay server.
+2. The receiver - this program will retrieve a file from the relay server. 
 3. The relay - this program can recieve and send files.
+
+Details: 
+- Assume that the users of laptop A and B can talk on the phone and exchange a secret code that represents the file being sent/received. 
+- The relay server will only store up to 4MB in memory of the file being sent.
 
 ## Prerequisites
 
