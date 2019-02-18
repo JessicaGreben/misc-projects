@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"Grebenschikov_Jess/pkg/storage"
+	"github.com/jessicagreben/misc-projects/simple-repl/pkg/storage"
 )
 
 // Run starts the REPL, reading from stdin and executing the commands.
